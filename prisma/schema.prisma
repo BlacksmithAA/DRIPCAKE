@@ -1,0 +1,146 @@
+// Schema de Prisma — Sistema de Pedidos y Fidelización (Dripcake)
+// Documento de referencia: 01-documento-requerimientos.md (sección 4)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Usuarios ──────────────────────────────────────────────────────────────
+// Roles: 'cliente' | 'empleado' | 'admin'
+model Usuario {
+  id            String   @id @default(cuid())
+  nombre        String
+  telefono      String
+  email         String   @unique
+  passwordHash  String
+  rol           String   // 'cliente' | 'empleado' | 'admin'
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pedidos             Pedido[]
+  transaccionesPuntos TransaccionPuntos[]
+  canjesQR            CanjeQR[]
+
+  @@index([rol])
+}
+
+// ─── Catálogo ──────────────────────────────────────────────────────────────
+model Producto {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String
+  precio      Float    // en USD
+  unidadVenta String   // ej. "unidad", "paquete de 12"
+  cantidadMin Int      @default(1)
+  cantidadMax Int      @default(50)
+  activo      Boolean  @default(true)
+  archivado   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  itemsPedido ItemPedido[]
+}
+
+// ─── Días no laborables ────────────────────────────────────────────────────
+model DiaNoLaborable {
+  id          String   @id @default(cuid())
+  fecha       DateTime // día específico no laborable
+  tipo        String   // 'feriado' | 'vacaciones' | 'eventualidad'
+  descripcion String
+  recurrente  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([fecha])
+}
+
+// ─── Pedidos ───────────────────────────────────────────────────────────────
+// Estados del ticket (columna kanban): 'recibido' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado' | 'no_retirado'
+model Pedido {
+  id                String   @id @default(cuid())
+  clienteId         String
+  cliente           Usuario  @relation(fields: [clienteId], references: [id])
+  fechaHoraRetiro   DateTime // programado en hora de Panamá
+  estadoTicket      String   @default("recibido")
+  pagado            Boolean  @default(false)
+  entregado         Boolean  @default(false)
+  noShow            Boolean  @default(false)
+  costoTotal        Float
+  qrRetiroToken     String   @unique
+  descuentoPuntos   Float    @default(0) // descuento aplicado por canje de puntos (en USD)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  items             ItemPedido[]
+  transaccionesPuntos TransaccionPuntos[]
+
+  @@index([clienteId])
+  @@index([fechaHoraRetiro])
+  @@index([estadoTicket])
+}
+
+// ─── Ítems de pedido ───────────────────────────────────────────────────────
+model ItemPedido {
+  id          String  @id @default(cuid())
+  pedidoId    String
+  pedido      Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  productoId  String
+  producto    Producto @relation(fields: [productoId], references: [id])
+  cantidad    Int
+  precioUnitario Float  // precio al momento de la compra
+  subtotal    Float
+
+  @@index([pedidoId])
+}
+
+// ─── Transacciones de puntos (cashback) ────────────────────────────────────
+// tipo: 'ganado' | 'canjeado'
+model TransaccionPuntos {
+  id          String   @id @default(cuid())
+  clienteId   String
+  cliente     Usuario  @relation(fields: [clienteId], references: [id])
+  tipo        String   // 'ganado' | 'canjeado'
+  montoPuntos Int
+  pedidoId    String?  // opcional — solo para 'ganado' o 'canjeado' asociado a un pedido
+  pedido      Pedido?  @relation(fields: [pedidoId], references: [id])
+  descripcion String?  // ej. "Cashback por pedido #abc123"
+  createdAt   DateTime @default(now())
+
+  @@index([clienteId])
+}
+
+// ─── QR de canje de puntos ─────────────────────────────────────────────────
+// estado: 'pendiente' | 'completado' | 'expirado'
+model CanjeQR {
+  id               String   @id @default(cuid())
+  clienteId        String
+  cliente          Usuario  @relation(fields: [clienteId], references: [id])
+  token            String   @unique
+  puntosSolicitados Int
+  descuentoUSD     Float    // puntos / 100
+  estado           String   @default("pendiente")
+  fechaExpiracion  DateTime
+  createdAt        DateTime @default(now())
+  usadoEn          DateTime?
+
+  @@index([clienteId])
+  @@index([token])
+}
+
+// ─── Configuración del sistema (singleton, una sola fila) ──────────────────
+model ConfiguracionSistema {
+  id                            Int      @id @default(1)
+  limiteUnidadesPorProducto     Boolean  @default(false)
+  limiteUnidadesMax             Int      @default(0)
+  limiteTotalPedidosPorDia      Boolean  @default(false)
+  limiteTotalPedidosMax         Int      @default(0)
+  corteHorarioPorDia            Boolean  @default(false)
+  corteHorarioHora              String   @default("14:00") // HH:MM en hora Panamá
+  minimoCanjePuntos             Int      @default(100)     // mínimo para generar QR de canje
+  updatedAt                     DateTime @updatedAt
+}
