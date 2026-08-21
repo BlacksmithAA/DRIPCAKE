@@ -1,17 +1,13 @@
-// Generación y validación de tokens QR
-// Dos tipos: QR de retiro (asociado al pedido) y QR de canje (temporal, on-demand)
+// Generación y validación de tokens QR de retiro
 
 import crypto from 'crypto';
 
-export type TipoQR = 'retiro' | 'canje';
-
 /**
- * Genera un token único e impredecible para un QR.
+ * Genera un token único e impredecible para el QR de retiro de un pedido.
  */
-export function generarTokenQR(tipo: TipoQR): string {
+export function generarTokenQR(): string {
   const random = crypto.randomBytes(24).toString('hex');
-  const prefijo = tipo === 'retiro' ? 'rt' : 'cj';
-  return `${prefijo}_${random}`;
+  return `rt_${random}`;
 }
 
 /**
@@ -23,10 +19,9 @@ export function hashToken(token: string): string {
 }
 
 /**
- * Valida formato básico de un token QR.
+ * Valida formato básico de un token QR de retiro.
  */
-export function esTokenValido(token: string, tipo: TipoQR): boolean {
+export function esTokenValido(token: string): boolean {
   if (!token || typeof token !== 'string') return false;
-  const prefijo = tipo === 'retiro' ? 'rt' : 'cj';
-  return token.startsWith(`${prefijo}_`) && token.length > 10;
+  return token.startsWith('rt_') && token.length > 10;
 }

@@ -1,10 +1,10 @@
-// POST /api/pedidos/:id/cancelar — Cliente cancela su pedido (>48h hábiles)
+// POST /api/pedidos/:id/cancelar — Cliente cancela su propio pedido
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { validar48hHabiles, ahoraEnPanama } from '@/lib/reglas-fecha';
+import { ahoraEnPanama } from '@/lib/reglas-fecha';
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -21,10 +21,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: 'No se puede cancelar este pedido' }, { status: 400 });
   }
 
-  const validacion = await validar48hHabiles(pedido.fechaHoraRetiro, ahoraEnPanama());
-  if (!validacion.valido) {
+  const ahora = ahoraEnPanama();
+  if (pedido.fechaHoraRetiro <= ahora) {
     return NextResponse.json(
-      { error: 'Dentro de la ventana de 48h hábiles, contactanos para cancelar' },
+      { error: 'El pedido ya está vencido o en curso. Contactá al negocio para cancelar.' },
       { status: 400 }
     );
   }

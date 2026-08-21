@@ -14,12 +14,11 @@ export default async function NuevoPedidoPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Nuevo pedido</h1>
-      <p className="text-slate-600 text-sm">
-        Seleccioná los productos, la cantidad y agendá tu retiro. La hora de retiro debe tener
-        al menos <strong>48 horas hábiles</strong> de anticipación (no se cuentan domingos ni
-        días no laborables).
+      <p className="text-cafe-600 text-sm">
+        Seleccioná los productos y la cantidad. Te mostraremos el próximo viernes o sábado con stock disponible.
+        Si no hay stock para esta semana, te ofrecemos agendar para la siguiente.
       </p>
-      <FormularioNuevoPedido productos={productos} configuracion={configuracion} />
+      <FormularioNuevoPedido productos={productos} whatsappContacto={configuracion?.whatsappContacto} />
     </div>
   );
 }

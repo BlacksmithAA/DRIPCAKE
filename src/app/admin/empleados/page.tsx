@@ -19,7 +19,7 @@ export default async function EmpleadosPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Empleados</h1>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-cafe-600">
         Creá y gestioná las cuentas de empleado. Los empleados desactivados no podrán iniciar sesión.
       </p>
 
@@ -33,7 +33,7 @@ export default async function EmpleadosPage() {
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left border-b border-slate-200">
+            <tr className="text-left border-b border-cafe-200">
               <th className="py-2">Nombre</th>
               <th>Email</th>
               <th>Teléfono</th>
@@ -44,22 +44,22 @@ export default async function EmpleadosPage() {
           <tbody>
             {empleados.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center text-slate-500 py-4">
+                <td colSpan={5} className="text-center text-cafe-500 py-4">
                   Sin empleados registrados.
                 </td>
               </tr>
             )}
             {empleados.map((e) => (
-              <tr key={e.id} className="border-b border-slate-100">
+              <tr key={e.id} className="border-b border-cafe-100">
                 <td className="py-2 font-medium">{e.nombre}</td>
-                <td className="text-slate-600">{e.email}</td>
-                <td className="text-slate-600">{e.telefono}</td>
+                <td className="text-cafe-600">{e.email}</td>
+                <td className="text-cafe-600">{e.telefono}</td>
                 <td>
                   <span
                     className={`badge ${
                       e.activo
                         ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-slate-200 text-slate-600'
+                        : 'bg-crema-300 text-cafe-600'
                     }`}
                   >
                     {e.activo ? 'Activo' : 'Inactivo'}

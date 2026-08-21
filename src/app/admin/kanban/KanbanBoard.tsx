@@ -12,6 +12,7 @@ import {
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { ESTADOS_TICKET, EstadoTicket, etiquetaEstado, colorEstado } from '@/lib/constants';
 import { formatHora, formatMonto } from '@/lib/format';
+import { ImagenAmpliable } from '@/components/ImagenAmpliable';
 import { useRouter } from 'next/navigation';
 
 type PedidoCard = {
@@ -20,12 +21,11 @@ type PedidoCard = {
   cliente: { nombre: string; telefono: string };
   fechaHoraRetiro: string;
   costoTotal: number;
-  descuentoPuntos: number;
   pagado: boolean;
   entregado: boolean;
   noShow: boolean;
   qrRetiroToken: string;
-  items: { cantidad: number; producto: { nombre: string; unidadVenta: string } }[];
+  items: { cantidad: number; nombreProducto: string; producto: { unidadVenta: string; imagenUrl?: string | null } }[];
 };
 
 const COLUMNAS: EstadoTicket[] = ['recibido', 'en_preparacion', 'listo', 'no_retirado'];
@@ -70,7 +70,7 @@ export function KanbanBoard({ initialPedidos, rol }: { initialPedidos: PedidoCar
                 <Tarjeta key={p.id} pedido={p} rol={rol} onChange={() => router.refresh()} />
               ))}
             {pedidos.filter((p) => p.estadoTicket === col).length === 0 && (
-              <p className="text-xs text-slate-400 text-center py-6">Vacío</p>
+              <p className="text-xs text-cafe-400 text-center py-6">Vacío</p>
             )}
           </Columna>
         ))}
@@ -85,7 +85,7 @@ function Columna({ estado, children }: { estado: string; children: React.ReactNo
     <div
       ref={setNodeRef}
       className={`rounded-xl p-2 min-h-[200px] ${
-        isOver ? 'bg-drip-100' : 'bg-slate-100'
+        isOver ? 'bg-dorado-100' : 'bg-crema-200'
       }`}
     >
       <div className="flex items-center justify-between mb-2 px-1">
@@ -125,25 +125,31 @@ function Tarjeta({ pedido, rol, onChange }: { pedido: PedidoCard; rol: string; o
       {...listeners}
       className="card cursor-grab active:cursor-grabbing select-none"
     >
-      <div className="font-semibold text-slate-900">{pedido.cliente.nombre}</div>
-      <div className="text-xs text-slate-500">{pedido.cliente.telefono}</div>
-      <div className="text-xs text-slate-600 mt-2">
+      <div className="flex items-start gap-2">
+        <ImagenAmpliable
+          src={pedido.items[0]?.producto.imagenUrl}
+          alt=""
+          className="w-10 h-10 rounded-lg border border-cafe-200 shrink-0"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-cafe-900">{pedido.cliente.nombre}</div>
+          <div className="text-xs text-cafe-500">{pedido.cliente.telefono}</div>
+        </div>
+      </div>
+      <div className="text-xs text-cafe-600 mt-2">
         Retiro: <span className="font-medium">{formatHora(new Date(pedido.fechaHoraRetiro))}</span>
       </div>
 
-      <ul className="text-xs text-slate-700 mt-2 space-y-0.5 border-t border-slate-100 pt-2">
+      <ul className="text-xs text-cafe-700 mt-2 space-y-0.5 border-t border-cafe-100 pt-2">
         {pedido.items.map((it, i) => (
           <li key={i}>
-            {it.cantidad}× {it.producto.nombre}
+            {it.cantidad}× {it.nombreProducto}
           </li>
         ))}
       </ul>
 
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-        <div className="font-bold text-drip-700">{formatMonto(pedido.costoTotal)}</div>
-        {pedido.descuentoPuntos > 0 && (
-          <span className="text-xs text-emerald-600">-{formatMonto(pedido.descuentoPuntos)}</span>
-        )}
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-cafe-100">
+        <div className="font-bold text-cafe-800">{formatMonto(pedido.costoTotal)}</div>
       </div>
 
       <div className="flex flex-wrap gap-1 mt-3">
@@ -155,7 +161,7 @@ function Tarjeta({ pedido, rol, onChange }: { pedido: PedidoCard; rol: string; o
           className={`text-xs px-2 py-1 rounded-md ${
             pedido.pagado
               ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+              : 'bg-crema-200 text-cafe-700 hover:bg-crema-300'
           }`}
         >
           {pedido.pagado ? '✓ Pagado' : 'Marcar pago'}
@@ -168,7 +174,7 @@ function Tarjeta({ pedido, rol, onChange }: { pedido: PedidoCard; rol: string; o
           className={`text-xs px-2 py-1 rounded-md ${
             pedido.entregado
               ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+              : 'bg-crema-200 text-cafe-700 hover:bg-crema-300'
           }`}
         >
           {pedido.entregado ? '✓ Entregado' : 'Marcar entrega'}

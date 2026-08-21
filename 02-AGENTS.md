@@ -1,4 +1,4 @@
-# AGENTS.md — Sistema de Pedidos y Fidelización (Panadería)
+# AGENTS.md — Sistema de Pedidos (Panadería)
 
 Este archivo guía a OpenCode (o cualquier agente de código) durante el desarrollo de este proyecto. Contiene el stack técnico, la estructura del proyecto y el estado actual por fases. La referencia funcional completa está en `01-documento-requerimientos.md` — léelo antes de generar código. El estado de avance detallado está en `03-PROGRESS.md`.
 
@@ -15,9 +15,9 @@ Este archivo guía a OpenCode (o cualquier agente de código) durante el desarro
 | Autenticación | **NextAuth.js** con credenciales + sesión JWT | Maneja roles (`cliente` / `empleado` / `admin`) de forma nativa. No se usa `@auth/prisma-adapter` a pesar de estar instalado |
 | UI | **React + Tailwind CSS** | Rapidez de desarrollo, responsive de forma natural |
 | Kanban drag-and-drop | **dnd-kit** | Librería ligera y mantenida para tableros kanban en React |
-| Generación de QR | **qrcode** (npm) | Genera QR de retiro y de canje |
+| Generación de QR | **qrcode** (npm) | Genera QR de retiro |
 | Lectura de QR (cámara) | **html5-qrcode** | Escaneo desde el navegador, funciona en celular/tablet sin app nativa |
-| Manejo de fechas/horas | **date-fns** + **date-fns-tz** | Cálculo confiable de reglas de 48h fijando zona horaria `America/Panama` |
+| Manejo de fechas/horas | **date-fns** + **date-fns-tz** | Cálculo de semanas de venta y días no laborables fijando zona horaria `America/Panama` |
 | Validación de formularios | **Zod** | Comparte esquemas entre frontend y backend (API routes) |
 
 **Por qué Next.js y no separar frontend/backend (React + Express):** para un proyecto de este tamaño, con un solo desarrollador apoyado por un agente de código, tener todo en un solo repositorio/proyecto reduce la complejidad de configuración, despliegue y mantenimiento. La API vive en `app/api/*` dentro del mismo proyecto, pero sigue estando desacoplada de la UI (los mismos endpoints podrían ser consumidos después por un bot de WhatsApp sin tocar el frontend).
@@ -46,9 +46,7 @@ dripcake/
 │   │   │   │       ├── page.tsx
 │   │   │   │       └── FormularioNuevoPedido.tsx
 │   │   │   ├── perfil/
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── GenerarCanjeButton.tsx
-│   │   │   │   └── VerCanjeQR.tsx
+│   │   │   │   └── page.tsx
 │   │   │   └── layout.tsx
 │   │   ├── admin/             # Rutas protegidas para admin/empleado
 │   │   │   ├── page.tsx
@@ -59,13 +57,18 @@ dripcake/
 │   │   │   ├── menu/
 │   │   │   │   ├── page.tsx
 │   │   │   │   ├── FormProducto.tsx
+│   │   │   │   ├── EditarProductoButton.tsx
 │   │   │   │   └── EliminarProductoButton.tsx
+│   │   │   ├── historial/
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── HistorialPedidos.tsx
 │   │   │   ├── empleados/
 │   │   │   │   ├── page.tsx
 │   │   │   │   ├── FormEmpleado.tsx
 │   │   │   │   └── ToggleEmpleadoButton.tsx
 │   │   │   ├── dias-no-laborables/
 │   │   │   │   ├── page.tsx
+│   │   │   │   ├── CalendarioDiasNoLaborables.tsx
 │   │   │   │   ├── FormDiaNoLaborable.tsx
 │   │   │   │   └── EliminarDiaButton.tsx
 │   │   │   ├── configuracion/
@@ -91,13 +94,13 @@ dripcake/
 │   │   │   ├── pedidos/[id]/entrega/route.ts
 │   │   │   ├── pedidos/[id]/estado/route.ts
 │   │   │   ├── pedidos/[id]/no-show/route.ts
+│   │   │   ├── pedidos/historial/route.ts
 │   │   │   ├── agenda/bloques/route.ts
 │   │   │   ├── dias-no-laborables/route.ts
 │   │   │   ├── dias-no-laborables/[id]/route.ts
 │   │   │   ├── configuracion/route.ts
-│   │   │   ├── canje/generar/route.ts
-│   │   │   ├── qr/retiro/[token]/route.ts
-│   │   │   └── qr/canje/[token]/route.ts
+│   │   │   ├── productos/[id]/media/route.ts
+│   │   │   └── qr/retiro/[token]/route.ts
 │   │   ├── qr/[tipo]/[token]/page.tsx
 │   │   ├── login/page.tsx
 │   │   ├── registro/page.tsx
@@ -107,13 +110,15 @@ dripcake/
 │   │   ├── globals.css
 │   │   └── not-found.tsx
 │   ├── components/
-│   │   └── Navbar.tsx
+│   │   ├── Navbar.tsx
+│   │   ├── BottomNav.tsx
+│   │   └── ImagenAmpliable.tsx
 │   ├── lib/
 │   │   ├── auth.ts              # Configuración de NextAuth
 │   │   ├── prisma.ts            # Singleton de PrismaClient
-│   │   ├── reglas-fecha.ts      # 48h hábiles, bloques, alternativas
-│   │   ├── puntos.ts            # Cálculo de cashback
-│   │   ├── qr.ts                # Generación/validación de tokens QR
+│   │   ├── agenda-stock.ts      # Stock semanal, semanas de venta viernes/sábado, bloques
+│   │   ├── reglas-fecha.ts      # Días no laborables y helpers de zona horaria
+│   │   ├── qr.ts                # Generación/validación de tokens QR de retiro
 │   │   ├── timezone.ts          # Helpers de zona horaria America/Panama
 │   │   ├── format.ts            # Formateo de moneda/fecha
 │   │   └── constants.ts         # Constantes del sistema
@@ -135,7 +140,7 @@ dripcake/
 
 ## 3. Estado actual por fases
 
-Las fases 0 a 5 están mayormente implementadas. El trabajo activo se concentra en la Fase 6 y Fase 7.
+Las fases 0 a 5 y las fases F a I están implementadas. El trabajo activo se concentra en pulido y corrección de warnings.
 
 ### Fase 0 — Setup del proyecto ✅
 - Next.js + TypeScript + Tailwind configurados.
@@ -143,17 +148,16 @@ Las fases 0 a 5 están mayormente implementadas. El trabajo activo se concentra 
 - NextAuth con roles funcionando.
 
 ### Fase 1 — Modelo de datos y catálogo ✅
-- Schema completo (incluye `activo` en `Usuario` y `archivado` en `Producto`).
-- CRUD de productos: crear, activar/desactivar y eliminar/archivar desde `/admin/menu`.
+- Schema completo (incluye `activo` en `Usuario`, `archivado` en `Producto`, y snapshots `nombreProducto`/`precioUnitario` en `ItemPedido`).
+- CRUD de productos: crear, editar, activar/desactivar y eliminar/archivar desde `/admin/menu`.
 - Gestión de empleados: crear y activar/desactivar desde `/admin/empleados`.
-- **Pendiente:** edición de productos.
 
 ### Fase 2 — Pedidos y agenda ✅
 - Formulario de nuevo pedido.
-- Agenda con bloques de horario.
-- Regla de 48h hábiles con domingos y días no laborables.
+- Agenda con bloques de horario (viernes y sábado).
+- Stock semanal por producto.
+- Sugerencia automática de semana siguiente cuando no hay stock.
 - QR de retiro automático.
-- **Pendiente:** sugerir alternativas cuando un día está bloqueado.
 
 ### Fase 3 — Panel administrativo (kanban) ✅
 - Kanban con drag-and-drop.
@@ -162,34 +166,45 @@ Las fases 0 a 5 están mayormente implementadas. El trabajo activo se concentra 
 
 ### Fase 4 — Escaneo de QR ✅
 - Escáner con cámara.
-- Flujo QR de retiro y QR de canje.
+- Flujo QR de retiro.
 
-### Fase 5 — Loyalty (cashback) ✅
-- Acreditación de puntos al marcar pagado.
-- Canje de puntos por descuento vía QR.
-- Mínimo de canje configurable.
+### Fase 5 — Loyalty (cashback) ❌ Eliminado
+- El sistema de puntos, cashback y QR de canje fue retirado por completo.
+- Ver decisión en `03-PROGRESS.md`.
 
-### Fase 6 — Reglas de negocio configurables 🔄
-- UI de configuración lista.
-- Persistencia en `ConfiguracionSistema`.
-- **Pendiente:**
-  - Aplicar límite de unidades por producto por día.
-  - Aplicar corte horario por día.
-  - Conectar sugerencia de alternativas.
+### Fase 6 — Stock semanal y agenda ✅
+- Reemplaza las reglas de negocio configurables por producto (límite por día, total pedidos, corte horario).
+- Stock semanal por producto con cálculo en tiempo real sobre `ItemPedido`.
+- Venta exclusiva viernes y sábado.
+- Sugerencia automática de semana siguiente y contacto por WhatsApp.
 
-### Fase 7 — Pulido y responsive 🔄
+### Fase 7 — Pulido, rediseño visual y navegación móvil ✅
 - Responsive base presente.
-- **Pendiente:** limpiar warnings de ESLint, revisar kanban/escáner en tablet/celular, mejorar estados vacíos y errores.
+- Paleta marrón/crema/dorado y tipografía serif (Playfair Display + Inter).
+- Navegación inferior fija en móvil (`BottomNav`).
+- Foto/video de muestra por producto.
+
+### Fase F — Histórico de pedidos para administrador ✅
+- Endpoint y UI con filtros/paginación en `/admin/historial`.
+
+### Fase G — Calendario visual de días no laborables ✅
+- Calendario mensual con modal de edición.
+
+### Fase H — Edición de productos + snapshot en ItemPedido ✅
+- Edición de productos; pedidos históricos conservan nombre/precio originales.
+
+### Fase I — Lightbox de imagen de producto ✅
+- Click para ampliar imágenes en catálogo, menú y kanban.
 
 ---
 
 ## 4. Convenciones para el agente de código
 
-- Todo el código y comentarios en **español** para nombres de dominio (ej. `pedido`, `cliente`, `puntosCashback`), pero identificadores técnicos estándar en inglés cuando sea idiomático (ej. `useState`, `handleSubmit`).
+- Todo el código y comentarios en **español** para nombres de dominio (ej. `pedido`, `cliente`, `stockSemanal`), pero identificadores técnicos estándar en inglés cuando sea idiomático (ej. `useState`, `handleSubmit`).
 - Toda fecha/hora se maneja y se muestra en **America/Panama**, nunca en hora local del navegador sin conversión explícita.
-- La lógica de reglas de negocio (48h hábiles, cálculo de puntos, validación de QR) debe vivir en `src/lib/`, no mezclada dentro de componentes de UI — así es reutilizable y testeable.
-- No implementar pasarela de pago ni lógica de personalización de pedidos — están explícitamente fuera de alcance en esta fase (ver documento de requerimientos, sección 1.2 y 6).
-- Antes de modificar reglas de negocio complejas, revisar `src/lib/reglas-fecha.ts`, `src/lib/puntos.ts` y `src/lib/qr.ts`.
+- La lógica de reglas de negocio (stock semanal, semanas de venta, validación de QR) debe vivir en `src/lib/`, no mezclada dentro de componentes de UI — así es reutilizable y testeable.
+- No implementar pasarela de pago ni lógica de personalización de pedidos — están explícitamente fuera de alcance (ver documento de requerimientos, sección 1.2 y 6).
+- Antes de modificar reglas de negocio complejas, revisar `src/lib/agenda-stock.ts`, `src/lib/reglas-fecha.ts` y `src/lib/qr.ts`.
 
 ---
 

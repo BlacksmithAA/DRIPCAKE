@@ -17,14 +17,14 @@ const doc = new PDFDocument({
   info: {
     Title: 'Dripcake — Resumen del Sistema',
     Author: 'Dripcake',
-    Subject: 'Sistema de Pedidos y Fidelización',
+    Subject: 'Sistema de Pedidos',
   },
 });
 
 doc.pipe(fs.createWriteStream(outPath));
 
 // ─── Paleta y constantes ─────────────────────────────────────────────────
-const COLOR_PRIMARIO = '#974d27';     // drip-700
+const COLOR_PRIMARIO = '#74402d';     // cafe-700
 const COLOR_SECUNDARIO = '#5a4630';
 const COLOR_TEXTO = '#1f1f1f';
 const COLOR_GRIS = '#555555';
@@ -45,11 +45,11 @@ const saltar = (n = 1) => { for (let i = 0; i < n; i++) doc.moveDown(0.5); };
 doc.rect(0, 0, doc.page.width, 320).fill(COLOR_PRIMARIO);
 
 doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(38).text('Dripcake', 60, 110);
-doc.font('Helvetica').fontSize(16).text('Sistema de Pedidos y Fidelización', 60, 165);
+doc.font('Helvetica').fontSize(16).text('Sistema de Pedidos', 60, 165);
 doc.fontSize(12).fillColor('#f5e2cd').text('Resumen funcional para el dueño del negocio', 60, 195);
 
 doc.fillColor('#ffffff').fontSize(10).font('Helvetica');
-doc.text('Versión 1.0', 60, 260);
+doc.text('Versión 2.0', 60, 260);
 doc.text('Agosto 2026', 60, 275);
 
 doc.fillColor('#1f1f1f');
@@ -70,8 +70,8 @@ saltar(1);
 escribirTexto(
   'Dripcake es un sistema web que permite a tus clientes hacer pedidos de pan estandarizado ' +
   'desde su celular o computadora, agendar el día y la hora en que van a pasar a retirar, ' +
-  'y acumular puntos por cada compra. Los pedidos se organizan en un tablero que vos y tus ' +
-  'empleados pueden revisar desde el mostrador.'
+  'y ver el catálogo de productos con foto y video de muestra. Los pedidos se organizan en ' +
+  'un tablero que vos y tus empleados pueden revisar desde el mostrador.'
 );
 saltar();
 escribirTexto(
@@ -90,8 +90,7 @@ const roles = [
     titulo: 'El cliente',
     descripcion:
       'Es la persona que quiere comprar pan. Se registra una sola vez, hace pedidos cuando ' +
-      'quiere, ve su historial y sus puntos, y muestra un código QR en el mostrador para ' +
-      'retirar.',
+      'quiere, ve su historial y muestra un código QR en el mostrador para retirar.',
   },
   {
     titulo: 'El empleado',
@@ -102,9 +101,8 @@ const roles = [
   {
     titulo: 'El administrador (vos)',
     descripcion:
-      'Sos quien configura todo: el catálogo de productos, los días que la panadería ' +
-      'permanece cerrada, las reglas para aceptar pedidos, y los parámetros del sistema ' +
-      'de puntos.',
+      'Sos quien configura todo: el catálogo de productos, el stock semanal de cada producto, ' +
+      'los días que la panadería permanece cerrada, el número de WhatsApp de contacto y los empleados.',
   },
 ];
 
@@ -123,11 +121,11 @@ saltar(1);
 const pasosCliente = [
   'Se registra con su nombre, teléfono, email y una contraseña.',
   'Elige los productos que quiere comprar, por ejemplo, pan de masa madre o baguette.',
-  'Selecciona el día y la hora en que va a venir a retirar. El sistema solo le muestra horarios disponibles.',
+  'El sistema le ofrece automáticamente el próximo viernes o sábado con stock disponible.',
+  'Selecciona el bloque de horario en el que va a venir a retirar.',
   'Confirma el pedido. A partir de ese momento, el pedido queda registrado.',
   'El sistema le entrega un código QR. Ese código es el comprobante para retirar.',
   'El día del retiro, viene al mostrador, muestra su código QR, paga y se lleva su pedido.',
-  'Cuando el administrador marca el pedido como pagado, los puntos se suman a su cuenta automáticamente.',
 ];
 
 pasosCliente.forEach((p, i) => {
@@ -137,39 +135,24 @@ pasosCliente.forEach((p, i) => {
 });
 saltar();
 
-// ─── Regla de las 48 horas
-escribirTexto('La regla de las 48 horas hábiles', { size: 16, color: COLOR_PRIMARIO });
+// ─── Stock semanal y venta viernes/sábado
+escribirTexto('Stock semanal y venta viernes/sábado', { size: 16, color: COLOR_PRIMARIO });
 saltar(1);
 escribirTexto(
-  'Para que la panadería tenga tiempo suficiente de preparar cada pedido, el cliente debe ' +
-  'agendar su retiro con al menos 48 horas hábiles de anticipación.'
+  'La panadería vende únicamente viernes y sábado. Cada producto tiene un stock semanal ' +
+  'configurable: la cantidad disponible para esa semana de venta.'
 );
 saltar();
 escribirTexto(
-  '¿Qué significa "horas hábiles"? Que no se cuentan las horas en que la panadería está ' +
-  'cerrada. En la práctica:'
+  'El stock se calcula en tiempo real. Cada vez que un cliente hace un pedido, el sistema ' +
+  'suma las cantidades ya reservadas y le muestra solo los horarios de la semana que aún ' +
+  'tiene disponibilidad. Si se agota el stock de la semana próxima, el sistema ofrece ' +
+  'automáticamente agendar para la semana siguiente.'
 );
-saltar(0.5);
-
-const reglas48 = [
-  'No se cuentan los domingos: la panadería no abre los domingos.',
-  'No se cuentan los días feriados ni los días no laborables que vos configures.',
-  'El sistema hace el cálculo automáticamente y solo muestra al cliente los horarios que cumplen la regla.',
-];
-
-reglas48.forEach((r) => {
-  doc.font('Helvetica-Bold').fillColor(COLOR_PRIMARIO).text('•  ', { continued: true });
-  doc.font('Helvetica').fillColor(COLOR_TEXTO).text(r);
-  saltar(0.4);
-});
 saltar();
-
-escribirTexto('Ejemplo:', { size: 12, color: COLOR_SECUNDARIO });
-saltar(0.3);
 escribirTexto(
-  'Si un cliente hace un pedido el viernes a las 10 de la mañana, no puede pedir para el ' +
-  'domingo (la panadería está cerrada) ni contar ese día dentro de las 48 horas. Recién ' +
-  'podría retirar a partir del martes, en el primer horario disponible que el sistema le muestre.'
+  'Si un cliente no quiere esperar a la siguiente semana, puede contactar directamente al ' +
+  'negocio por WhatsApp desde el mismo formulario de pedido.'
 );
 saltar(2);
 
@@ -177,91 +160,23 @@ saltar(2);
 escribirTexto('Cancelaciones', { size: 16, color: COLOR_PRIMARIO });
 saltar(1);
 escribirTexto(
-  'Un cliente puede cancelar su propio pedido mientras falten más de 48 horas hábiles para ' +
-  'el retiro. Si está dentro de esa ventana, el sistema no le permite cancelar desde la ' +
-  'app y se le pide que se contacte directamente con la panadería.'
-);
-saltar(2);
-
-// ─── Sistema de puntos
-escribirTexto('Sistema de puntos y fidelización', { size: 16, color: COLOR_PRIMARIO });
-saltar(1);
-
-escribirTexto('Cómo se ganan puntos:', { size: 12, color: COLOR_SECUNDARIO });
-saltar(0.3);
-escribirTexto(
-  'Por cada compra, el cliente recibe como cashback el 10% del monto pagado. ' +
-  'En concreto, por cada dólar gastado el cliente suma 10 puntos.'
-);
-saltar();
-
-escribirTexto('Cómo se canjean:', { size: 12, color: COLOR_SECUNDARIO });
-saltar(0.3);
-escribirTexto(
-  'Cada 100 puntos equivalen a un dólar de descuento en una compra futura. El cliente ' +
-  'puede generar un código QR de canje desde su perfil, mostrarlo en el mostrador y el ' +
-  'descuento se aplica al pedido en curso. Ese código QR vence a los pocos minutos y solo ' +
-  'se puede usar una vez.'
-);
-saltar();
-
-escribirTexto('Cuándo se acreditan los puntos:', { size: 12, color: COLOR_SECUNDARIO });
-saltar(0.3);
-escribirTexto(
-  'Los puntos se suman a la cuenta del cliente únicamente cuando vos o un empleado ' +
-  'marcan el pedido como pagado. Esto evita sumar puntos por pedidos cancelados o no retirados.'
+  'Un cliente puede cancelar su propio pedido mientras la fecha y hora de retiro aún no ' +
+  'hayan comenzado. Si el pedido ya está vencido o en curso, el sistema le pide que se ' +
+  'contacte directamente con la panadería.'
 );
 saltar(2);
 
 // ─── Códigos QR
-escribirTexto('Los dos tipos de códigos QR', { size: 16, color: COLOR_PRIMARIO });
+escribirTexto('Código QR de retiro', { size: 16, color: COLOR_PRIMARIO });
 saltar(1);
 
-const tablaQR = [
-  ['Tipo de QR', '¿Para qué sirve?', '¿Cuándo se usa?'],
-  [
-    'QR de retiro',
-    'Confirmar que el cliente vino a buscar su pedido.',
-    'El cliente lo muestra al llegar al mostrador. El empleado lo escanea y el pedido queda marcado como entregado.',
-  ],
-  [
-    'QR de canje',
-    'Aplicar un descuento en la compra actual usando los puntos acumulados.',
-    'El cliente lo genera desde su perfil cuando quiere gastar sus puntos. Tiene una vigencia corta y se puede usar solo una vez.',
-  ],
-];
-
-let y = doc.y;
-const colXs = [60, 160, 350];
-const colW = [100, 190, 180];
-
-// Encabezado
-doc.rect(60, y, doc.page.width - 120, 28).fill(COLOR_PRIMARIO);
-tablaQR[0].forEach((cell, i) => {
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10);
-  doc.text(cell, colXs[i], y + 9, { width: colW[i] });
-});
-y += 28;
-
-// Filas
-tablaQR.slice(1).forEach((row, idx) => {
-  const rowH = idx === 0 ? 50 : 50;
-  const bg = idx % 2 === 0 ? '#fdf8f3' : '#ffffff';
-  doc.rect(60, y, doc.page.width - 120, rowH).fill(bg);
-  doc.strokeColor(COLOR_LINEA).lineWidth(0.5).rect(60, y, doc.page.width - 120, rowH).stroke();
-  row.forEach((cell, i) => {
-    doc.fillColor(COLOR_TEXTO).font('Helvetica-Bold').fontSize(10);
-    if (i === 0) doc.text(cell, colXs[i], y + 8, { width: colW[i] });
-    else {
-      doc.font('Helvetica').fontSize(9.5);
-      doc.text(cell, colXs[i], y + 8, { width: colW[i] });
-    }
-  });
-  y += rowH;
-});
-
-doc.y = y + 15;
-saltar();
+escribirTexto(
+  'Cada pedido genera un código QR único. El cliente lo muestra en el mostrador al llegar ' +
+  'a retirar. Vos o un empleado lo escanean con la cámara del celular o tablet, y el pedido ' +
+  'queda marcado automáticamente como entregado. El QR de retiro es válido hasta que el ' +
+  'cliente retire el pedido o el pedido se cancele.'
+);
+saltar(2);
 
 // ─── Lo que ve el empleado / administrador
 escribirTexto('El tablero de pedidos (kanban)', { size: 16, color: COLOR_PRIMARIO });
@@ -309,10 +224,10 @@ escribirTexto('¿Qué podés configurar vos como administrador?', { size: 16, co
 saltar(1);
 
 const configItems = [
-  ['Catálogo de productos', 'Agregar, editar, activar o desactivar productos. Cada producto tiene nombre, descripción, precio, unidad de venta (por unidad, por paquete, etc.) y cantidades mínima y máxima por pedido.'],
-  ['Días no laborables', 'Cargar feriados, vacaciones o eventualidades. Esos días quedan automáticamente bloqueados para retiros y no se cuentan en las 48 horas hábiles. Podés marcar si se repiten cada año.'],
-  ['Reglas de aceptación', 'Activar o desactivar límites: cantidad máxima de unidades por producto por día, cantidad máxima de pedidos por día, o un corte horario para pedidos de un día específico.'],
-  ['Mínimo de puntos para canjear', 'Definir cuántos puntos necesita acumular un cliente antes de poder generar un QR de canje.'],
+  ['Catálogo de productos', 'Agregar, activar o desactivar productos. Cada producto tiene nombre, descripción, precio, unidad de venta, cantidades mínima y máxima por pedido, stock semanal, foto y video de muestra.'],
+  ['Stock semanal', 'Definir cuántas unidades de cada producto están disponibles por semana (viernes + sábado). Dejar vacío si un producto no tiene límite de stock.'],
+  ['Días no laborables', 'Cargar feriados, vacaciones o eventualidades. Esos días quedan automáticamente bloqueados para retiros. Podés marcar si se repiten cada año.'],
+  ['WhatsApp de contacto', 'Número al que se dirigirán los clientes cuando un producto no tenga stock disponible y prefieran contactar directamente.'],
 ];
 
 configItems.forEach(([t, d]) => {
@@ -331,7 +246,7 @@ const noIncluidos = [
   'Pedidos personalizados: siguen llegando por WhatsApp, como hasta ahora.',
   'Pago en línea: el pago siempre se hace en el mostrador, en efectivo o por el medio que decidas. No hay integración con tarjeta, Yappy ni otras pasarelas.',
   'App móvil nativa: el sistema se usa desde cualquier navegador, en celular, tablet o computadora. No hay que descargar nada.',
-  'Integración con WhatsApp o Instagram: en el futuro podrían sumarse como canales adicionales, pero en esta primera versión no.',
+  'Integración con WhatsApp o Instagram: en el futuro podrían sumarse como canales adicionales, pero en esta versión no.',
 ];
 
 noIncluidos.forEach((n) => {
@@ -349,7 +264,7 @@ const beneficios = [
   ['Menos WhatsApp', 'Los pedidos repetitivos y estandarizados salen de WhatsApp. Tu número queda libre para pedidos personalizados y consultas puntuales.'],
   ['Pedidos organizados', 'Cada pedido tiene un estado claro: recibido, en preparación, listo o no retirado. Nada se pierde.'],
   ['Historial por cliente', 'Podés ver qué pidió cada cliente, si retiró, si pagó, y si tiene historial de no-shows.'],
-  ['Fidelización automática', 'El sistema de puntos corre solo. No tenés que llevar una planilla a mano.'],
+  ['Stock controlado', 'El stock semanal evita sobreventas y te permite planificar la producción con anticipación.'],
   ['Pago en el mostrador', 'El cliente paga siempre en el local. No hay dinero pasando por la plataforma. Vos mantenés tu forma de cobro.'],
   ['Funciona en cualquier dispositivo', 'El sistema está pensado para usarse desde el mostrador con una tablet o un celular, sin instalar nada.'],
 ];
@@ -365,7 +280,7 @@ saltar();
 // ─── Pie de página
 linea(doc.y);
 saltar(0.5);
-escribirTexto('Dripcake — Sistema de Pedidos y Fidelización · Resumen funcional v1.0', { size: 9, color: COLOR_GRIS });
+escribirTexto('Dripcake — Sistema de Pedidos · Resumen funcional v2.0', { size: 9, color: COLOR_GRIS });
 escribirTexto('Documento de referencia para el dueño del negocio', { size: 9, color: COLOR_GRIS });
 
 doc.end();

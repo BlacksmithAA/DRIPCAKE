@@ -42,8 +42,8 @@ export default function RegistroPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="card w-full max-w-md">
-        <h1 className="text-2xl font-bold text-drip-700 mb-1">Crear cuenta</h1>
-        <p className="text-sm text-slate-600 mb-6">Empezá a acumular cashback en Dripcake</p>
+        <h1 className="text-2xl font-bold text-cafe-800 mb-1">Crear cuenta</h1>
+        <p className="text-sm text-cafe-600 mb-6">Hacé tu pedido de pan artesanal en Dripcake</p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
@@ -103,9 +103,9 @@ export default function RegistroPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-slate-600">
+        <div className="mt-6 text-center text-sm text-cafe-600">
           ¿Ya tenés cuenta?{' '}
-          <Link href="/login" className="text-drip-700 font-medium hover:underline">
+          <Link href="/login" className="text-cafe-800 font-medium hover:underline">
             Iniciar sesión
           </Link>
         </div>

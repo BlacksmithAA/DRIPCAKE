@@ -18,13 +18,7 @@ export default async function ConfiguracionPage() {
       <h1 className="text-2xl font-bold">Configuración del sistema</h1>
       <ConfigForm
         initial={{
-          limiteUnidadesPorProducto: config.limiteUnidadesPorProducto,
-          limiteUnidadesMax: config.limiteUnidadesMax,
-          limiteTotalPedidosPorDia: config.limiteTotalPedidosPorDia,
-          limiteTotalPedidosMax: config.limiteTotalPedidosMax,
-          corteHorarioPorDia: config.corteHorarioPorDia,
-          corteHorarioHora: config.corteHorarioHora,
-          minimoCanjePuntos: config.minimoCanjePuntos,
+          whatsappContacto: config.whatsappContacto,
         }}
       />
     </div>

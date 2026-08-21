@@ -13,6 +13,7 @@ const schema = z.object({
   unidadVenta: z.string().min(1),
   cantidadMin: z.number().int().positive(),
   cantidadMax: z.number().int().positive(),
+  stockSemanal: z.number().int().positive().nullable(),
 });
 
 export async function POST(req: Request) {

@@ -6,7 +6,11 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { generarTokenQR } from '@/lib/qr';
-import { validar48hHabiles, ahoraEnPanama } from '@/lib/reglas-fecha';
+import { toZonedTime } from 'date-fns-tz';
+import { isFriday, isSaturday, startOfDay, addDays } from 'date-fns';
+import { calcularDisponibilidad } from '@/lib/agenda-stock';
+import { dePanamaAInstant } from '@/lib/reglas-fecha';
+import { TIMEZONE } from '@/lib/timezone';
 
 const schema = z.object({
   items: z
@@ -33,11 +37,12 @@ export async function POST(req: Request) {
   const data = schema.parse(body);
 
   const fechaHoraRetiro = new Date(data.fechaHoraRetiro);
+  const fechaPanama = toZonedTime(fechaHoraRetiro, TIMEZONE);
+  const diaSemana = fechaPanama.getDay();
 
-  // Validar 48h hábiles
-  const validacion = await validar48hHabiles(fechaHoraRetiro, ahoraEnPanama());
-  if (!validacion.valido) {
-    return NextResponse.json({ error: validacion.mensaje }, { status: 400 });
+  // Validar que sea viernes o sábado
+  if (!isFriday(fechaPanama) && !isSaturday(fechaPanama)) {
+    return NextResponse.json({ error: 'Solo se pueden agendar retiros los viernes y sábados' }, { status: 400 });
   }
 
   // Cargar productos y validar cantidades
@@ -58,8 +63,20 @@ export async function POST(req: Request) {
     }
   }
 
-  // Verificar si hay un canje de puntos activo (asumimos que se pasa como opcional)
-  // Por simplicidad, el canje de puntos se aplica en el momento del pago por el admin.
+  // Validar que haya stock para la semana seleccionada
+  const diaBase = isSaturday(fechaPanama) ? addDays(fechaPanama, -1) : fechaPanama;
+  const inicioSemana = dePanamaAInstant(startOfDay(diaBase));
+
+  for (const it of data.items) {
+    const disp = await calcularDisponibilidad(it.productoId, inicioSemana);
+    if (disp.disponible < it.cantidad) {
+      const p = productos.find((p) => p.id === it.productoId)!;
+      return NextResponse.json(
+        { error: `No hay suficiente stock de ${p.nombre} para esa semana` },
+        { status: 400 }
+      );
+    }
+  }
 
   // Calcular costo
   const itemsConSubtotal = data.items.map((it) => {
@@ -67,6 +84,7 @@ export async function POST(req: Request) {
     return {
       productoId: p.id,
       cantidad: it.cantidad,
+      nombreProducto: p.nombre,
       precioUnitario: p.precio,
       subtotal: p.precio * it.cantidad,
     };
@@ -80,7 +98,7 @@ export async function POST(req: Request) {
       fechaHoraRetiro,
       estadoTicket: 'recibido',
       costoTotal,
-      qrRetiroToken: generarTokenQR('retiro'),
+      qrRetiroToken: generarTokenQR(),
       items: {
         create: itemsConSubtotal,
       },

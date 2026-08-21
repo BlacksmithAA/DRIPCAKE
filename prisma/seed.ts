@@ -10,8 +10,6 @@ async function main() {
   console.log('🌱 Iniciando seed de Dripcake...');
 
   // Limpiar datos previos (orden importa por las FK)
-  await prisma.canjeQR.deleteMany();
-  await prisma.transaccionPuntos.deleteMany();
   await prisma.itemPedido.deleteMany();
   await prisma.pedido.deleteMany();
   await prisma.diaNoLaborable.deleteMany();
@@ -79,6 +77,7 @@ async function main() {
       unidadVenta: 'unidad',
       cantidadMin: 1,
       cantidadMax: 20,
+      stockSemanal: 50,
       activo: true,
     },
   });
@@ -91,6 +90,7 @@ async function main() {
       unidadVenta: 'unidad',
       cantidadMin: 1,
       cantidadMax: 15,
+      stockSemanal: 40,
       activo: true,
     },
   });
@@ -103,6 +103,7 @@ async function main() {
       unidadVenta: 'paquete de 12',
       cantidadMin: 1,
       cantidadMax: 3,
+      stockSemanal: 10,
       activo: true,
     },
   });
@@ -115,6 +116,7 @@ async function main() {
       unidadVenta: 'unidad',
       cantidadMin: 1,
       cantidadMax: 10,
+      stockSemanal: 25,
       activo: true,
     },
   });
@@ -127,6 +129,7 @@ async function main() {
       unidadVenta: 'unidad',
       cantidadMin: 1,
       cantidadMax: 5,
+      stockSemanal: 12,
       activo: true,
     },
   });
@@ -165,13 +168,7 @@ async function main() {
   await prisma.configuracionSistema.create({
     data: {
       id: 1,
-      limiteUnidadesPorProducto: false,
-      limiteUnidadesMax: 50,
-      limiteTotalPedidosPorDia: false,
-      limiteTotalPedidosMax: 30,
-      corteHorarioPorDia: false,
-      corteHorarioHora: '14:00',
-      minimoCanjePuntos: 100,
+      whatsappContacto: '+50760000000',
     },
   });
 

@@ -1,4 +1,4 @@
-// Schema de Prisma — Sistema de Pedidos y Fidelización (Dripcake)
+// Schema de Prisma — Sistema de Pedidos (Dripcake)
 // Documento de referencia: 01-documento-requerimientos.md (sección 4)
 
 generator client {
@@ -23,9 +23,7 @@ model Usuario {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  pedidos             Pedido[]
-  transaccionesPuntos TransaccionPuntos[]
-  canjesQR            CanjeQR[]
+  pedidos       Pedido[]
 
   @@index([rol])
 }
@@ -39,6 +37,9 @@ model Producto {
   unidadVenta String   // ej. "unidad", "paquete de 12"
   cantidadMin Int      @default(1)
   cantidadMax Int      @default(50)
+  stockSemanal Int?    // null = sin control de stock; número = unidades disponibles por semana (viernes + sábado)
+  imagenUrl   String?  // foto de muestra del producto
+  videoUrl    String?  // video corto de muestra del producto
   activo      Boolean  @default(true)
   archivado   Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -72,12 +73,10 @@ model Pedido {
   noShow            Boolean  @default(false)
   costoTotal        Float
   qrRetiroToken     String   @unique
-  descuentoPuntos   Float    @default(0) // descuento aplicado por canje de puntos (en USD)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   items             ItemPedido[]
-  transaccionesPuntos TransaccionPuntos[]
 
   @@index([clienteId])
   @@index([fechaHoraRetiro])
@@ -86,61 +85,23 @@ model Pedido {
 
 // ─── Ítems de pedido ───────────────────────────────────────────────────────
 model ItemPedido {
-  id          String  @id @default(cuid())
-  pedidoId    String
-  pedido      Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  productoId  String
-  producto    Producto @relation(fields: [productoId], references: [id])
-  cantidad    Int
-  precioUnitario Float  // precio al momento de la compra
-  subtotal    Float
+  id             String   @id @default(cuid())
+  pedidoId       String
+  pedido         Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  productoId     String
+  producto       Producto @relation(fields: [productoId], references: [id])
+  cantidad       Int
+  nombreProducto String   // snapshot del nombre del producto al momento del pedido
+  precioUnitario Float    // snapshot del precio unitario al momento del pedido
+  subtotal       Float
 
   @@index([pedidoId])
-}
-
-// ─── Transacciones de puntos (cashback) ────────────────────────────────────
-// tipo: 'ganado' | 'canjeado'
-model TransaccionPuntos {
-  id          String   @id @default(cuid())
-  clienteId   String
-  cliente     Usuario  @relation(fields: [clienteId], references: [id])
-  tipo        String   // 'ganado' | 'canjeado'
-  montoPuntos Int
-  pedidoId    String?  // opcional — solo para 'ganado' o 'canjeado' asociado a un pedido
-  pedido      Pedido?  @relation(fields: [pedidoId], references: [id])
-  descripcion String?  // ej. "Cashback por pedido #abc123"
-  createdAt   DateTime @default(now())
-
-  @@index([clienteId])
-}
-
-// ─── QR de canje de puntos ─────────────────────────────────────────────────
-// estado: 'pendiente' | 'completado' | 'expirado'
-model CanjeQR {
-  id               String   @id @default(cuid())
-  clienteId        String
-  cliente          Usuario  @relation(fields: [clienteId], references: [id])
-  token            String   @unique
-  puntosSolicitados Int
-  descuentoUSD     Float    // puntos / 100
-  estado           String   @default("pendiente")
-  fechaExpiracion  DateTime
-  createdAt        DateTime @default(now())
-  usadoEn          DateTime?
-
-  @@index([clienteId])
-  @@index([token])
+  @@index([productoId])
 }
 
 // ─── Configuración del sistema (singleton, una sola fila) ──────────────────
 model ConfiguracionSistema {
-  id                            Int      @id @default(1)
-  limiteUnidadesPorProducto     Boolean  @default(false)
-  limiteUnidadesMax             Int      @default(0)
-  limiteTotalPedidosPorDia      Boolean  @default(false)
-  limiteTotalPedidosMax         Int      @default(0)
-  corteHorarioPorDia            Boolean  @default(false)
-  corteHorarioHora              String   @default("14:00") // HH:MM en hora Panamá
-  minimoCanjePuntos             Int      @default(100)     // mínimo para generar QR de canje
-  updatedAt                     DateTime @updatedAt
+  id                 Int      @id @default(1)
+  whatsappContacto   String?  // número de WhatsApp del negocio, formato internacional, ej. "+50760000000"
+  updatedAt          DateTime @updatedAt
 }

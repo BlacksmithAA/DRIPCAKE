@@ -1,65 +1,73 @@
-// GET /api/agenda/bloques?fecha=YYYY-MM-DD
-// Devuelve los bloques de retiro disponibles para esa fecha, aplicando:
-//  - Días no laborables
-//  - Regla de 48h hábiles
-//  - Límites de configuración
+// POST /api/agenda/bloques
+// Recibe un carrito de productos y devuelve:
+//  - la semana sugerida (actual o próxima con stock)
+//  - las fechas viernes/sábado de esa semana
+//  - los bloques de horario disponibles dentro de esos días
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import {
-  ahoraEnPanama,
-  esDiaNoLaborable,
-  generarBloquesDelDia,
-  validar48hHabiles,
-} from '@/lib/reglas-fecha';
 import { prisma } from '@/lib/prisma';
+import { determinarSemanaParaCarrito, obtenerBloquesParaSemana } from '@/lib/agenda-stock';
+import { z } from 'zod';
 
-export async function GET(req: Request) {
+const schema = z.object({
+  items: z
+    .array(
+      z.object({
+        productoId: z.string(),
+        cantidad: z.number().int().positive(),
+      })
+    )
+    .min(1),
+});
+
+export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const fechaStr = searchParams.get('fecha');
-  if (!fechaStr) return NextResponse.json({ error: 'Falta fecha' }, { status: 400 });
+  const body = await req.json();
+  const { items } = schema.parse(body);
 
-  // Parseamos la fecha como día en hora Panamá
-  const [y, m, d] = fechaStr.split('-').map(Number);
-  const fecha = new Date(y, m - 1, d, 0, 0, 0);
+  // Validar que los productos existan y estén activos
+  const productos = await prisma.producto.findMany({
+    where: { id: { in: items.map((i) => i.productoId) }, activo: true, archivado: false },
+  });
 
-  if (await esDiaNoLaborable(fecha)) {
-    return NextResponse.json({ bloques: [], mensaje: 'Día no laborable' });
+  if (productos.length !== items.length) {
+    return NextResponse.json({ error: 'Uno o más productos no están disponibles' }, { status: 400 });
   }
 
-  const todosLosBloques = await generarBloquesDelDia(fecha);
-  const ahora = ahoraEnPanama();
-  const config = await prisma.configuracionSistema.findUnique({ where: { id: 1 } });
+  const semanaSugerida = await determinarSemanaParaCarrito(items);
 
-  // Filtrar por 48h hábiles
-  const bloquesValidos: string[] = [];
-  for (const b of todosLosBloques) {
-    const v = await validar48hHabiles(b, ahora);
-    if (v.valido) bloquesValidos.push(b.toISOString());
-  }
-
-  // Si está activado el límite de pedidos por día, descontar
-  if (config?.limiteTotalPedidosPorDia) {
-    const inicio = new Date(fecha);
-    inicio.setHours(0, 0, 0, 0);
-    const fin = new Date(fecha);
-    fin.setHours(23, 59, 59, 999);
-
-    const pedidosDelDia = await prisma.pedido.count({
-      where: {
-        fechaHoraRetiro: { gte: inicio, lte: fin },
-        estadoTicket: { not: 'cancelado' },
-      },
+  if (!semanaSugerida) {
+    return NextResponse.json({
+      mensaje: 'No hay stock disponible en las próximas semanas para tu selección.',
+      semana: null,
+      bloques: { viernes: [], sabado: [] },
     });
-
-    if (pedidosDelDia >= config.limiteTotalPedidosMax) {
-      return NextResponse.json({ bloques: [], mensaje: 'Cupo diario agotado' });
-    }
   }
 
-  return NextResponse.json({ bloques: bloquesValidos });
+  // Para el cálculo de bloques usamos la cantidad total del producto con mayor demanda relativa
+  // (cualquiera de los productos; si uno no tiene bloques, todos quedarían vacíos).
+  const itemRepresentativo = items.reduce((max, it) => (it.cantidad > max.cantidad ? it : max), items[0]);
+
+  const { viernes, sabado, semana } = await obtenerBloquesParaSemana(
+    itemRepresentativo.productoId,
+    semanaSugerida.semana.viernes,
+    itemRepresentativo.cantidad
+  );
+
+  return NextResponse.json({
+    semana: {
+      esSemanaActual: semanaSugerida.esSemanaActual,
+      label: semana.label,
+      viernes: semana.viernes.toISOString(),
+      sabado: semana.sabado.toISOString(),
+    },
+    bloques: {
+      viernes: viernes.map((b) => b.toISOString()),
+      sabado: sabado.map((b) => b.toISOString()),
+    },
+  });
 }

@@ -3,10 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
-type Resultado =
-  | { tipo: 'retiro'; ok: boolean; mensaje: string; descuento?: number }
-  | { tipo: 'canje'; ok: boolean; mensaje: string; descuento?: number }
-  | null;
+type Resultado = { ok: boolean; mensaje: string } | null;
 
 export function EscanerQR() {
   const [escaneando, setEscaneando] = useState(false);
@@ -28,7 +25,7 @@ export function EscanerQR() {
       );
       setEscaneando(true);
     } catch (e: any) {
-      setResultado({ tipo: 'retiro', ok: false, mensaje: 'No se pudo acceder a la cámara: ' + (e?.message ?? e) });
+      setResultado({ ok: false, mensaje: 'No se pudo acceder a la cámara: ' + (e?.message ?? e) });
       scannerRef.current = null;
     }
   }
@@ -58,30 +55,28 @@ export function EscanerQR() {
       // decodificado esperado: URL completa al endpoint de escaneo
       const url = new URL(decodedText);
       const parts = url.pathname.split('/').filter(Boolean);
-      // esperado: ['qr', 'retiro', '<token>'] o ['qr', 'canje', '<token>']
-      if (parts.length !== 3 || parts[0] !== 'qr') {
-        setResultado({ tipo: 'retiro', ok: false, mensaje: 'QR no reconocido' });
+      // esperado: ['qr', 'retiro', '<token>']
+      if (parts.length !== 3 || parts[0] !== 'qr' || parts[1] !== 'retiro') {
+        setResultado({ ok: false, mensaje: 'QR no reconocido' });
         return;
       }
-      const tipo = parts[1] as 'retiro' | 'canje';
       const token = parts[2];
-      await procesar(tipo, token);
+      await procesar(token);
     } catch {
-      setResultado({ tipo: 'retiro', ok: false, mensaje: 'QR inválido' });
+      setResultado({ ok: false, mensaje: 'QR inválido' });
     }
   }
 
-  async function procesar(tipo: 'retiro' | 'canje', token: string) {
-    const endpoint = tipo === 'retiro' ? `/api/qr/retiro/${token}` : `/api/qr/canje/${token}`;
-    const res = await fetch(endpoint, { method: 'POST' });
+  async function procesar(token: string) {
+    const res = await fetch(`/api/qr/retiro/${token}`, { method: 'POST' });
     const data = await res.json();
-    setResultado({ tipo, ok: res.ok, mensaje: data.message ?? data.error, descuento: data.descuentoUSD });
+    setResultado({ ok: res.ok, mensaje: data.message ?? data.error });
   }
 
   return (
     <div className="space-y-4">
       <div className="card">
-        <div id={containerId} className="w-full max-w-md mx-auto rounded-lg overflow-hidden bg-slate-100" style={{ minHeight: 280 }} />
+        <div id={containerId} className="w-full max-w-md mx-auto rounded-lg overflow-hidden bg-crema-200" style={{ minHeight: 280 }} />
         <div className="flex gap-2 mt-3 justify-center">
           {!escaneando ? (
             <button onClick={start} className="btn-primary">Iniciar cámara</button>
@@ -100,14 +95,9 @@ export function EscanerQR() {
           }`}
         >
           <div className="font-semibold mb-1">
-            {resultado.ok ? '✓ Listo' : '✗ Error'} — QR de {resultado.tipo}
+            {resultado.ok ? '✓ Listo' : '✗ Error'}
           </div>
           <div className="text-sm">{resultado.mensaje}</div>
-          {resultado.descuento !== undefined && (
-            <div className="text-lg font-bold text-emerald-700 mt-2">
-              Descuento aplicado: ${resultado.descuento.toFixed(2)}
-            </div>
-          )}
           <button onClick={() => setResultado(null)} className="btn-secondary mt-3 text-sm">
             Escanear otro
           </button>

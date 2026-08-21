@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Navbar } from '@/components/Navbar';
+import { BottomNav } from '@/components/BottomNav';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -17,17 +18,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
   if (rol === 'admin') {
     items.push(
+      { href: '/admin/historial', label: 'Historial' },
       { href: '/admin/menu', label: 'Menú' },
       { href: '/admin/empleados', label: 'Empleados' },
       { href: '/admin/dias-no-laborables', label: 'Días no laborables' },
-      { href: '/admin/configuracion', label: 'Configuración' },
+      { href: '/admin/configuracion', label: 'Configuración' }
     );
   }
 
   return (
     <>
       <Navbar items={items} />
-      <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6">{children}</main>
+      <BottomNav />
     </>
   );
 }

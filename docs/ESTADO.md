@@ -1,6 +1,6 @@
 # Estado actual del proyecto — Dripcake
 
-> Documento de referencia rápida para agentes de IA y para validación del usuario. Actualizado al 11/08/2026.
+> Documento de referencia rápida para agentes de IA y para validación del usuario. Actualizado al 20/08/2026.
 >
 > - Requerimientos funcionales: `01-documento-requerimientos.md`
 > - Guía técnica completa: `02-AGENTS.md`
@@ -27,8 +27,6 @@
 
 ## Cómo correrlo
 
-### Primera vez
-
 ```bash
 npm install
 npm run db:push
@@ -36,20 +34,11 @@ npm run db:seed
 npm run dev
 ```
 
-### Después de cambios en `schema.prisma`
+Después de cambios en `schema.prisma`: `npm run db:push`.
 
-```bash
-npm run db:push
-```
+Build de producción: `npm run build && npm start`.
 
-### Build de producción
-
-```bash
-npm run build
-npm start
-```
-
-> El proyecto no usa migraciones versionadas de Prisma. Si se decide pasar a producción con trazabilidad de DB, usar `npx prisma migrate dev`.
+> El proyecto no usa migraciones versionadas de Prisma.
 
 ---
 
@@ -62,44 +51,26 @@ NEXTAUTH_URL="http://localhost:3000"
 TZ=America/Panama
 ```
 
-Para Cloudflare Tunnel u otro dominio público, cambiar `NEXTAUTH_URL` al dominio HTTPS.
-
 ---
 
 ## Usuarios de prueba
-
-Creados automáticamente por `npm run db:seed`.
 
 | Rol | Email | Contraseña | Acceso |
 |---|---|---|---|
 | Admin | `admin@dripcake.com` | `admin123` | Todo: kanban, menú, configuración, días no laborables, escáner |
 | Empleado | `empleado@dripcake.com` | `empleado123` | Kanban, escáner, no-show |
-| Cliente | `cliente@dripcake.com` | `cliente123` | Pedidos, perfil, QR de canje |
-| Cliente | `carlos@dripcake.com` | `cliente123` | Pedidos, perfil, QR de canje |
+| Cliente | `cliente@dripcake.com` | `cliente123` | Pedidos, perfil, QR de retiro |
+| Cliente | `carlos@dripcake.com` | `cliente123` | Pedidos, perfil, QR de retiro |
 
 ---
 
 ## Rutas principales
 
-### Públicas
-- `/` — Landing
-- `/login` — Inicio de sesión
-- `/registro` — Auto-registro de clientes
-- `/qr/[tipo]/[token]` — Redirección pública de QRs
+**Públicas:** `/`, `/login`, `/registro`, `/qr/retiro/[token]`.
 
-### Cliente (requiere rol `cliente`)
-- `/pedidos` — Mis pedidos
-- `/pedidos/nuevo` — Crear pedido
-- `/perfil` — Perfil, puntos y QR de canje
+**Cliente:** `/pedidos`, `/pedidos/nuevo`, `/perfil`.
 
-### Admin / Empleado (requiere rol `admin` o `empleado`)
-- `/admin/kanban` — Tablero de pedidos
-- `/admin/escaner` — Escanear QR
-- `/admin/no-show` — Marcar pedidos no retirados
-- `/admin/menu` — Gestionar productos (solo `admin`)
-- `/admin/empleados` — Gestionar empleados (solo `admin`)
-- `/admin/dias-no-laborables` — Gestionar días no laborables (solo `admin`)
-- `/admin/configuracion` — Configuración del sistema (solo `admin`)
+**Admin/Empleado:** `/admin/kanban`, `/admin/escaner`, `/admin/no-show`, `/admin/historial`, `/admin/menu`, `/admin/empleados`, `/admin/dias-no-laborables`, `/admin/configuracion`.
 
 ---
 
@@ -109,25 +80,32 @@ Creados automáticamente por `npm run db:seed`.
 |---|---|---|
 | Login con roles | ✅ | JWT, bcrypt, roles cliente/empleado/admin |
 | Auto-registro clientes | ✅ | `/registro` |
-| Catálogo de productos | ✅ | Crear, activar/desactivar, eliminar/archivar. Falta editar |
-| Nuevo pedido | ✅ | Con validación min/max |
-| Agenda de retiro | ✅ | Bloques 8:00–18:00 |
-| Regla 48h hábiles | ✅ | Respeta domingos y días no laborables |
+| Catálogo de productos | ✅ | Crear, editar, activar/desactivar, eliminar/archivar, foto/video |
+| Histórico de pedidos (admin) | ✅ | Filtros, paginación y detalle en `/admin/historial` |
+| Calendario de días no laborables | ✅ | Vista mensual con modal de edición en `/admin/dias-no-laborables` |
+| Lightbox de imagen | ✅ | Click para ampliar en catálogo, menú y kanban |
+| Nuevo pedido | ✅ | Con validación min/max y media |
+| Agenda de retiro | ✅ | Bloques 8:00–18:00, solo viernes/sábado |
+| Stock semanal por producto | ✅ | Campo agregado; lógica en `src/lib/agenda-stock.ts` |
+| Venta viernes/sábado | ✅ | Reemplaza regla de 48h |
 | Días no laborables | ✅ | CRUD completo, soporte recurrente |
 | QR de retiro | ✅ | Generado al crear pedido |
-| Cancelación de pedidos | ✅ | Solo si faltan >48h hábiles |
+| Cancelación de pedidos | ✅ | Pedidos futuros |
 | Kanban | ✅ | Drag-and-drop, estados, pago, entrega |
 | No-show | ✅ | Marcado manual |
-| Cashback | ✅ | 10 % al marcar pagado |
-| QR de canje | ✅ | 10 minutos, un solo uso |
-| Escáner QR | ✅ | Retiro y canje |
-| Mínimo de canje configurable | ✅ | En `/admin/configuracion` |
-| Límite total de pedidos/día | ⚠️ | Evaluado en disponibilidad de bloques; no sugiere alternativas |
-| Límite unidades por producto/día | ❌ | Persistido pero no aplicado |
-| Corte horario por día | ❌ | Persistido pero no aplicado |
-| Sugerir alternativas | ❌ | Función existe en `lib/` pero no se usa |
-| Editar productos | ❌ | No implementado (eliminar/archivar sí) |
+| Cashback | ❌ | Eliminado de esta versión |
+| QR de canje | ❌ | Eliminado de esta versión |
+| Escáner QR | ✅ | Solo retiro |
+| Mínimo de canje configurable | ❌ | Eliminado junto con cashback |
+| Límite total de pedidos/día | ❌ | Reemplazado por stock semanal |
+| Límite unidades por producto/día | ❌ | Reemplazado por stock semanal |
+| Corte horario por día | ❌ | Reemplazado por stock semanal |
+| Sugerir alternativas | ✅ | Automático al agotarse stock semanal |
+| Editar productos | ✅ | Desde modal en `/admin/menu`; pedidos históricos conservan snapshot de nombre/precio |
 | Gestionar empleados desde UI | ✅ | Crear y activar/desactivar desde `/admin/empleados` |
+| Foto/video por producto | ✅ | Upload local en `public/uploads/productos/` |
+| Navegación inferior móvil | ✅ | `BottomNav` con rol cliente/empleado/admin |
+| Rediseño visual panadería | ✅ | Paleta cafe/crema/dorado, Playfair Display + Inter |
 
 ---
 
@@ -135,9 +113,14 @@ Creados automáticamente por `npm run db:seed`.
 
 - `src/lib/auth.ts` — Configuración de NextAuth.
 - `src/lib/prisma.ts` — Singleton de PrismaClient.
-- `src/lib/reglas-fecha.ts` — Cálculo de 48h hábiles, bloques y alternativas.
-- `src/lib/puntos.ts` — Lógica de cashback y canje.
-- `src/lib/qr.ts` — Generación y validación de tokens QR.
+- `src/lib/agenda-stock.ts` — Stock semanal, semanas de venta y bloques.
+- `src/lib/reglas-fecha.ts` — Días no laborables y helpers de zona horaria.
+- `src/lib/qr.ts` — Generación y validación de tokens QR de retiro.
+- `src/components/BottomNav.tsx` — Navegación inferior móvil.
+- `src/app/api/productos/[id]/media/route.ts` — Subida de foto/video.
+- `src/app/api/pedidos/historial/route.ts` — Histórico de pedidos con filtros.
+- `src/app/admin/dias-no-laborables/CalendarioDiasNoLaborables.tsx` — Calendario visual.
+- `src/components/ImagenAmpliable.tsx` — Lightbox reutilizable.
 - `prisma/seed.ts` — Datos iniciales.
 
 ---
@@ -146,15 +129,4 @@ Creados automáticamente por `npm run db:seed`.
 
 - Algunos componentes usan `<img>` en lugar de `<Image />` de Next.js (warnings de ESLint).
 - `/login` genera advertencia de "deopted to client-side rendering".
-- Al desmarcar un pedido como pagado se elimina la transacción de puntos ganados (sin historial de reversión).
 - No hay migraciones de Prisma; se usa `db push`.
-
----
-
-## Próximos pasos sugeridos
-
-1. Completar Fase 6: aplicar límite de unidades por producto/día y corte horario.
-2. Conectar sugerencia de alternativas cuando una fecha queda bloqueada.
-3. Agregar edición de productos (si se requiere).
-4. Limpiar warnings de ESLint y revisar responsive en tablet/celular.
-5. Decidir si se generan migraciones de Prisma y/o se migra a PostgreSQL para producción.

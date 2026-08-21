@@ -7,13 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
 const schema = z.object({
-  limiteUnidadesPorProducto: z.boolean(),
-  limiteUnidadesMax: z.number().int().nonnegative(),
-  limiteTotalPedidosPorDia: z.boolean(),
-  limiteTotalPedidosMax: z.number().int().nonnegative(),
-  corteHorarioPorDia: z.boolean(),
-  corteHorarioHora: z.string().regex(/^\d{2}:\d{2}$/),
-  minimoCanjePuntos: z.number().int().nonnegative(),
+  whatsappContacto: z.string().min(1).optional().or(z.literal('')),
 });
 
 export async function POST(req: Request) {
@@ -27,7 +21,9 @@ export async function POST(req: Request) {
 
   await prisma.configuracionSistema.update({
     where: { id: 1 },
-    data,
+    data: {
+      whatsappContacto: data.whatsappContacto || null,
+    },
   });
 
   return NextResponse.json({ ok: true });
